@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金嗓歌單查詢系統</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; }
+        .container { max-width: 900px; margin: auto; }
+        h1 { text-align: center; color: var(--primary-color); font-size: 24px; margin-bottom: 20px; }
+        
+        /* 搜尋框樣式 */
+        .search-box {
+            position: sticky; top: 10px; z-index: 100;
+            background: white; padding: 15px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+        input {
+            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
+            font-size: 18px; box-sizing: border-box; outline: none; transition: 0.3s;
+        }
+        input:focus { border-color: var(--accent-color); }
+        .info-text { font-size: 12px; color: #7f8c8d; margin-top: 8px; text-align: right; }
+
+        /* 表格樣式 */
+        .song-card {
+            background: white; border-radius: 8px; margin-bottom: 10px;
+            padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: grid; grid-template-columns: 80px 1fr 100px; gap: 10px; align-items: center;
+        }
+        .song-id { font-family: monospace; font-size: 20px; font-weight: bold; color: #e74c3c; }
+        .song-main { display: flex; flex-direction: column; }
+        .song-title { font-size: 18px; font-weight: 600; color: #333; }
+        .song-artist { font-size: 14px; color: #666; margin-top: 4px; }
+        .song-tag { 
+            font-size: 12px; text-align: center; background: #eee; 
+            padding: 4px 8px; border-radius: 4px; color: #555;
+        }
+
+        /* 手機版優化 */
+        @media (max-width: 500px) {
+            .song-card { grid-template-columns: 70px 1fr; }
+            .song-tag { grid-column: 1 / 3; text-align: left; background: none; padding: 0; color: var(--accent-color); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎤 金嗓點歌查詢</h1>
+    
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜尋歌名、歌手或編號..." autocomplete="off">
+        <div class="info-text" id="statusText">正在載入歌單...</div>
+    </div>
+
+    <div id="resultsList">
+        <!-- 搜尋結果會顯示在這裡 -->
+    </div>
+</div>
+
+<script>
+    let allSongs = [];
+
+    // 1. 讀取 JSON 資料
+    fetch('songs.json')
+        .then(response => response.json())
+        .then(data => {
+            allSongs = data;
+            document.getElementById('statusText').innerText = `共 ${allSongs.length} 首歌曲，已就緒`;
+            renderSongs(allSongs.slice(0, 50)); // 初始顯示前 50 筆
+        })
+        .catch(err => {
+            document.getElementById('statusText').innerText = "讀取資料失敗，請確認 songs.json 是否存在";
+            console.error(err);
+        });
+
+    const searchInput = document.getElementById('searchInput');
+    const resultsList = document.getElementById('resultsList');
+
+    // 2. 搜尋邏輯
+    searchInput.addEventListener('input', function() {
+        const keyword = this.value.toLowerCase().trim();
+        if (keyword === "") {
+            renderSongs(allSongs.slice(0, 50));
+            return;
+        }
+
+        const filtered = allSongs.filter(song => {
+            return (
+                String(song.點歌曲號).includes(keyword) ||
+                song.歌名.toLowerCase().includes(keyword) ||
+                song.演唱者.toLowerCase().includes(keyword)
+            );
+        });
+
+        renderSongs(filtered.slice(0, 200)); // 搜尋時最多顯示 200 筆，兼顧效能
+        document.getElementById('statusText').innerText = `找到 ${filtered.length} 筆結果`;
+    });
+
+    // 3. 渲染畫面
+    function renderSongs(songs) {
+        resultsList.innerHTML = songs.map(song => `
+            <div class="song-card">
+                <div class="song-id">${song.點歌曲號}</div>
+                <div class="song-main">
+                    <div class="song-title">${song.歌名}</div>
+                    <div class="song-artist">${song.演唱者.replace(/&/g, ' & ')}</div>
+                </div>
+                <div class="song-tag">${song.歌曲種類}</div>
+            </div>
+        `).join('');
+        
+        if (songs.length === 0) {
+            resultsList.innerHTML = '<div style="text-align:center; padding:50px; color:#999;">查無歌曲</div>';
+        }
+    }
+</script>
+
+</body>
+</html>
